@@ -1,0 +1,211 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+
+namespace DC09
+{
+    public class Protocol
+    {
+        public static void Main()
+        {
+            TcpListener server = null;
+            Int32 port = 5000;  //Listening Port
+            IPAddress localAddr = IPAddress.Parse("192.168.1.41");  //Local IP
+            server = new System.Net.Sockets.TcpListener(localAddr, port);
+            // Start listening for client requests.
+            server.Start();
+            try
+            {
+                // Buffer for reading data
+                Byte[] bytes = new Byte[256];
+                String data = null;
+
+                // Enter the listening loop.
+                while (true)
+                {
+                    TcpClient client = server.AcceptTcpClient();
+                    NetworkStream stream = client.GetStream();
+                    data = null;
+                    int i;
+                    Console.WriteLine("Waiting for Event to Occur...");
+                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    {
+                        // Translate data bytes to a ASCII string.
+                        data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
+                        data = data.ToUpper();
+                        // Process the data sent by the client.
+                        Thread ctThread = new Thread(() => DecodeData(data, stream));
+                        ctThread.Start();
+                        stream.Flush();
+                    }
+                }
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: {0}", e);
+            }
+            finally
+            {
+                // Stop listening for new clients.
+                server.Stop();
+            }
+
+            Console.WriteLine("\nHit enter to continue...");
+            Console.Read();
+
+            void DecodeData(string dataFromPanel, NetworkStream stream)
+            {
+                string strr = dataFromPanel;
+                char[] str = strr.ToCharArray();
+                int size = str.Length;
+                int start_data = 0;
+                int seq_start = -9999;
+                bool token = false;
+                bool start_commands = false;
+                bool ack_bool = false;
+                string CRC = "", LLL = "", TOKEN_Event = "", SEQ_NUMBER = "", RECEVIER_NUMBER = "", ACC_PREFIX = "",
+                    ACC_NO = "", COMMANDS = "", TIME_STAMP = "", ACK_String = "", ACK_Write = "";
+                for (int i = 1; i < size - 1; i++)
+                {
+                    if (str != null)
+                    {
+                        // All the data will be present here
+                        if (start_data + 5 > i)
+                        { //CRC
+                            CRC = CRC + str[i];
+                        }
+                        else if (start_data + 9 > i)
+                        { //LLL
+                            LLL += str[i];
+                            token = true;
+                            ack_bool = true;
+                        }
+                        else if (token)
+                        { //EVENT TOKEN 
+                            if (str[i] == '\"' && start_data + 9 != i)
+                            {
+                                token = false;
+                                seq_start = i;
+                            }
+                            else
+                            {
+                                if (start_data + 9 != i)
+                                {
+                                    TOKEN_Event += str[i];
+                                }
+                            }
+                        }
+                        else if (ack_bool)
+                        {
+                            ACK_String += str[i];
+                            if (seq_start + 4 >= i)
+                            { //SEQUENCE NUMBER
+                                SEQ_NUMBER += str[i];
+                            }
+                            else if (seq_start + 11 >= i)
+                            { //RECEVIER_NUMBER
+                                if (str[i] != 'R')
+                                {
+                                    RECEVIER_NUMBER += str[i];
+                                }
+                            }
+                            else if (seq_start + 18 >= i)
+                            { //ACC_PREFIX
+                                if (str[i] != 'L')
+                                {
+                                    ACC_PREFIX += str[i];
+                                }
+                            }
+                            else if (seq_start + 25 >= i)
+                            { //ACC_NO
+                                if (str[i] != '#')
+                                {
+                                    ACC_NO += str[i];
+                                    start_commands = true;
+                                }
+                            }
+                            else if (start_commands)
+                            { //start_commands
+
+                                if (str[i] != ']')
+                                {
+                                    COMMANDS += str[i];
+                                }
+                                else if (str[i + 1] == '_')
+                                {
+                                    COMMANDS += str[i];
+                                    start_commands = false;
+                                }
+                                else
+                                {
+                                    COMMANDS += str[i];
+                                }
+                            }
+                            else
+                            { //TIME_STAMP
+                                TIME_STAMP += str[i];
+                            }
+                        }
+                    }
+                }
+
+                //To calculate CRC for ack
+                //Reversed 0xA001 Little Endian (DCBA) crc // 5C410020"ACK"0001R000001L000000#000000[]
+                string dataString = "\"ACK\"" + SEQ_NUMBER + "R" + ACC_PREFIX + "L" + RECEVIER_NUMBER + "#" + ACC_NO + "[]";
+                ushort crc = 0x0000;
+                byte[] data = System.Text.Encoding.ASCII.GetBytes(dataString);
+                for (int i = 0; i < data.Length; i++)
+                {
+                    crc ^= (ushort)(data[i]);
+                    for (int j = 0; j < 8; j++)
+                    {
+                        if ((crc & 1) > 0)
+                            crc = (ushort)((crc >> 1) ^ 0xa001);
+                        else
+                            crc >>= 1;
+                    }
+                }
+
+                ACK_Write = '\n' + crc.ToString("X4") + String.Format("{0:x4}", (data.Length)) + dataString + '\r'; //ACK
+                byte[] msgAck = System.Text.Encoding.ASCII.GetBytes(ACK_Write);
+                stream.Write(msgAck, 0, msgAck.Length); // Send back a ACK.
+
+
+                //Console.WriteLine("String : " + strr);
+                // Console.WriteLine("CRC : " + CRC);
+                //Console.WriteLine("LLL : " + LLL);
+                Console.WriteLine(TOKEN_Event);
+                // Console.WriteLine("SEQ_NUMBER : " + SEQ_NUMBER);
+                // Console.WriteLine("RECEVIER_NUMBER : " + RECEVIER_NUMBER);
+                //  Console.WriteLine("ACC_PREFIX : " + ACC_PREFIX);
+                //  Console.WriteLine("ACC_NO : " + ACC_NO);
+                Console.WriteLine("COMMANDS : " + COMMANDS);
+                //  Console.WriteLine("TIME_STAMP : " + TIME_STAMP);
+                //  Console.WriteLine("ACK_string : " + ACK_String);
+                //  Console.WriteLine("------------------------------------");
+
+
+
+                // Console.WriteLine("Sent: {0}", ACK_Write);
+                Console.WriteLine("------------------------------------");
+
+
+            }
+
+        }
+
+    }
+
+}
+
+
+
+
+
+
+
+
+
