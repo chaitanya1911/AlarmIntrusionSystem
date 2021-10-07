@@ -1,22 +1,33 @@
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.socket.io/4.2.0/socket.io.min.js" integrity="sha384-PiBR5S00EtOj2Lto9Uu81cmoyZqR57XcOna1oAuVuIEjzj0wpqDVfD0JA9eXlRsj" crossorigin="anonymous"></script>
     <title>Document</title>
-</head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script></head>
 <body>
-    Hellooo
-    <button class="btn btn-primary" id="send" onclick="clickMe()">Send data to server</button>
-    <div class="jumbotron" id="msg"></div>
-    <script>
-        console.log("/////")
-var socket=io.connect('http://127.0.0.1:3001/',{ transports: ['websocket']});
+    
+    <div class="jumbotron" id="msg" style="margin:2% 25% ;">
+        <button class="btn btn-secondary" id="send" onclick="clickMe()">Send Commands</button>
+        <div id="msg" ></div>
+    </div>
+    
 
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+    <script>
+       
+        console.log("/////")
+  var socket=io.connect('http://127.0.0.1:3001/',{ transports: ['websocket']});
+  console.log(socket)
 socket.on('msg',(data)=>{
     var div=document.createElement('div')
-    div.innerText="frommsg"+data;
+    div.innerText=data;
     document.getElementById('msg').appendChild(div)
 });
 socket.on('ackmsg',(data)=>{
@@ -24,11 +35,12 @@ socket.on('ackmsg',(data)=>{
     div.innerText="fromack"+data;
     document.getElementById('msg').appendChild(div)
 });
+
+        
 function clickMe(){ 
     console.log(socket)
-socket.emit('commandFromClient','commandFromClientmmmmm')
+socket.emit('commandFromClient','\ncommandSentFromClient')
 }
-
     </script>
 </body>
 </html>

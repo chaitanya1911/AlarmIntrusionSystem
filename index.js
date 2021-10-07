@@ -5,55 +5,36 @@ var sokcetio=require('socket.io')
 const cors=require("cors");
 const app = express();
 var server = net.createServer();  
-const ioi=sokcetio(server)
 app.use(cors());  
 const { crc16 } = require('crc');
 const serverr = http.createServer(app);
 const io = sokcetio(serverr);
-var _dd;
 
-const Net = require('net');
 // The port number and hostname of the server.
 const port =5000; 
 const host = '192.168.1.37';
 
 // Create a new TCP client.
-const client1 = new Net.Socket(); //from fixed 5000 & .150
-const client = new Net.Socket();
-
+const client1 = new net.Socket(); //will write command to server
+client1.connect({ port: port,host:host}, function() {}); //from fixed 5000 & .150
 
 
 //from controller
-server.on('connection', handleConnection);
+server.on('connection', handleConnection);    
 server.on('command',handleCommand);
+
+//handles command from client
 function handleCommand(conn){
-    console.log("<<<<<<<<<<<<<")
-    client1.connect({ port: port,host:host}, function() {});
-    client.connect({ port: port,host:host}, function() {});
-        // If there is no error, the server has accepted the request and created a new 
-        // socket dedicated to us.
-        console.log(conn)
-        console.log('TCP connection established with the server.');
-    
-        // The client can now send data to the server by writing to its socket.
-        client1.write('Hello, server.',()=>{
-        
-            
-        });
-      
 
-    console.log("<<<<<<<<<<<<<")
+    const client = net.createConnection({port:port}) //client to get ack from server
+    // The client can now send data to the server by writing to its socket.
 
+    client1.write(conn,()=>{}); //writes command to server
     client1.on('data', function(chunk) {
+        //listens to ack
         console.log(`Data received from the server: ${chunk.toString()}.`);
-        _dd=chunk.toString();
-        client.write(_dd,()=>{
-        
-            
-        });
-        // Request an end to the connection after the data has been received.
-       client.end()
-       client1.end()
+        //send ack to client
+       client.write(chunk.toString(), function(err) { client.end(); }); 
     });
     
     client1.on('end', function() {
@@ -63,18 +44,15 @@ function handleCommand(conn){
         console.log('Requested an end to the TCP connection');
     });
     client1.on('error', (err)=>{
-        console.log('Connection %s error: %s', err.message); 
+        console.log('Connection  %s error: %s', err.message); 
     });
     client.on('error', (err)=>{
-        console.log('Connection %s error: %s', err.message); 
+        console.log('Connection Client %s error: %s', err.message); 
     });
 
 }
 
-
-server.listen(5000, function() {    
-  console.log('server listening too %j', server.address());  
-});
+//handles data recieved from server
 function handleConnection(conn) {   
   var remoteAddress = conn.remoteAddress + ':' + conn.remotePort;  
   console.log('new client connection from %s', remoteAddress);
@@ -82,8 +60,7 @@ function handleConnection(conn) {
   conn.on('error', onConnError);
   
   function onConnData(d) {  
-   var data=d.toString('utf8')
- 
+  var data=d.toString('utf8')
   var str = data.split('');
   var size = str.length;
   var start_data = 0;
@@ -181,10 +158,8 @@ function handleConnection(conn) {
     //Reversed 0xA001 Little Endian (DCBA) crc // 5C410020"ACK"0001R000001L000000#000000[]
     // console.log(crc16("\"SIA-DCS\"9876R579BDFL789ABC#12345A[#12345A|NFA129]").toString(16))
     var dataString = "\"ACK\"" + SEQ_NUMBER + "R" + ACC_PREFIX + "L" + RECEVIER_NUMBER + "#" + ACC_NO + "[]";
-
     var crc=crc16(dataString).toString(16)
-               
-   server.emit('data',data);
+    server.emit('data',data);
     var Ack_Write='\n'+crc+(dataString.length).toString(16).padStart(4,'0')+dataString+'\r';
     conn.write(Ack_Write)
   }
@@ -194,33 +169,21 @@ function handleConnection(conn) {
   }  
 }
 
-//
-
-
 //connection btwn client and server
 io.on('connection', socket => {
-
-  //Welcome the user
  server.on('data',(data)=>{
-
    socket.emit('msg',data)
-   
   });
-  server.on('ackCommand',()=>{
-      console.log("fffffff")
-      socket.emit('ackmsg',_dd)
-  })
+  
   socket.on('commandFromClient',(data)=>{
-      server.emit('command',data);
-  })
- 
+    server.emit('command',data);
+})
 });
 
-// Send a connection request to the server.
-
-
-// The client can also receive data from the server by reading from its socket.
-
+//listening ports
+server.listen(5000, function() {    
+    console.log('server listening too %j', server.address());  
+  });
 serverr.listen(3001,()=>{
   console.log("server running on port 3001...");
 });
