@@ -12,7 +12,7 @@ const io = sokcetio(serverr);
 
 // The port number and hostname of the server.
 const port =5000; 
-const host = '192.168.1.37';
+const host = '192.168.1.37';  //ip
 
 // Create a new TCP client.
 const client1 = new net.Socket(); //will write command to server
