@@ -11,8 +11,8 @@ const serverr = http.createServer(app);
 const io = sokcetio(serverr);
 
 // The port number and hostname of the server.
-const port =5000; 
-const host = '192.168.1.37';  //ip
+const port =5000; // <----------Enter the port here
+const host = '192.168.1.37';  // <---------Enter local ip here
 
 // Create a new TCP client.
 const client1 = new net.Socket(); //will write command to server
@@ -181,9 +181,7 @@ io.on('connection', socket => {
 });
 
 //listening ports
-server.listen(5000, function() {    
-    console.log('server listening too %j', server.address());  
-  });
+server.listen(port);
 serverr.listen(3001,()=>{
-  console.log("server running on port 3001...");
+  console.log("Server running on port 3001...");
 });
